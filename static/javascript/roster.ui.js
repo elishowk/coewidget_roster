@@ -35,7 +35,7 @@ $.uce.Roster.prototype = {
         active_users: $('ul.[data-user-list="online"]'),
         inactive_users: $('ul.[data-user-list="offline"]'),
         speakers: [],
-        updateInterval: 5000
+        updateInterval: 30000
     },
     // ucengine events
     meetingsEvents: {
@@ -44,6 +44,12 @@ $.uce.Roster.prototype = {
         "internal.roster.update"        : "_updateRoster"
     },
     _create: function() {
+        this._state = {
+            anonCounter: 0,
+            users: {},
+            roster: null,
+            requestRoster: false
+        };
         var that = this;
         this._updateLoop = window.setInterval(function(){
                 that._updateRoster();
@@ -52,12 +58,6 @@ $.uce.Roster.prototype = {
     /*
      * Users' state object
      */
-    _state: {
-        anonCounter: 0,
-        users: {},
-        roster: null,
-        requestRoster: false
-    },
     getUsersState: function() {
         return this._state.users;
     },
@@ -70,7 +70,6 @@ $.uce.Roster.prototype = {
         if (this._state.users[event.from]!==undefined && _.isBoolean(this._state.users[event.from]) === false) {
             // come back of an old friend
             this._state.users[event.from].visible = true;
-            //this._updateRoster();
             return;
         } 
         if (_.isBoolean(this._state.users[event.from]) === false) {
@@ -113,7 +112,6 @@ $.uce.Roster.prototype = {
     _handleLeave: function(event) {
         if (this._state.users[event.from]!==undefined && _.isBoolean(this._state.users[event.from]) === false) {
             this._state.users[event.from].visible = false;
-            //this._updateRoster();
             return;
         } 
         if (_.isBoolean(this._state.users[event.from]) === false) {
@@ -191,8 +189,11 @@ $.uce.Roster.prototype = {
         var me = this._state.users[this.options.uceclient.uid];
         var that = this;
 
-        // requête uce
+        // requête Async uce
         this.options.ucemeeting.getRoster(function(err, roster){
+            if (err!==null){
+                return;
+            }
             that._state.roster=roster;
             $.each(users, function(idx, user) {
                 // Si c'est anonymous on le mets au placard avec Mr Pignon
