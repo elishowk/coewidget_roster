@@ -31,11 +31,19 @@ $.uce.Roster.prototype = {
         uceclient: null,
         title: "Meeting Roster",
         default_avatar: null,
+        user_list: $('.users-list'),
         speaker_users: $('.users-list:first'),
         active_users: $('ul.[data-user-list="online"]'),
         inactive_users: $('ul.[data-user-list="offline"]'),
         speakers: [],
-        updateInterval: 30000
+        updateInterval: 30000,
+        selected_list : $(".selected-users-list"),
+        filters: $('#filters'),
+        currentFilter: {
+            "name": "all",
+            "type": "any",
+            "language": "any"
+        }
     },
     // ucengine events
     meetingsEvents: {
@@ -67,7 +75,7 @@ $.uce.Roster.prototype = {
      * "internal.roster.add" Event handler
     */
     _handleJoin: function(event) {
-        if (this._state.users[event.from]!==undefined && _.isBoolean(this._state.users[event.from]) === false) {
+        if (this._state.users[event.from] !== undefined && _.isBoolean(this._state.users[event.from]) === false) {
             // come back of an old friend
             this._state.users[event.from].visible = true;
             return;
@@ -87,18 +95,7 @@ $.uce.Roster.prototype = {
                 }
                 that._state.users[event.from] = result.result;
                 that._state.users[event.from].visible = visible;
-                that._state.users[event.from].you = false;
-                that._state.users[event.from].owner = false;
-                that._state.users[event.from].speaker = false;
 
-                if (event.from == that.options.uceclient.uid) {
-                    that._state.users[event.from].you = true;
-                }
-                for (var i=0; i < that.options.speakers.length; i++) {
-                    if (that._state.users[event.from].uid == that.options.speakers[i]){
-                        that._state.users[event.from].speaker = true;
-                    }
-                }
                 event.type = "internal.roster.update";
                 that.options.ucemeeting.trigger(event);
             });
@@ -129,19 +126,76 @@ $.uce.Roster.prototype = {
         return screenname;
     },
     
+    /*  Cette fonction attache au clic sur les utilisateurs
+     *  les fonctions de filtrage
+     */
+    
+    _attachClick: function(item) {
+        var that = this;
+        item.on("click", function(evt){
+            evt.preventDefault();
+            // on vérifie si l'item n'est pas actif -> dans ce cas on le 'désactive'
+            if(item.find('a').hasClass('active')){
+                that.options.filters.data('filters')._resetTicker(that.options.user_list , that.options.selected_list);
+            }
+            // sinon on l'ajoute 
+            else {
+                /* Fonction de filtrage simple -> on vire tout filtrage précédent */
+                if(that.options.selected_list.parent().find("li a").hasClass('active')){
+                    that.options.filters.data('filters')._resetTicker(that.options.user_list , that.options.selected_list);
+                }
+                that.options.filters.data('filters').filterMessages($(this).attr('id'), "useruid", "all");
+                $(this).find('a').addClass('active');
+                // on créé un clone dans la zone de filtres
+                $(this).clone().appendTo(that.options.selected_list).addClass('clone').on("click", function(evt) {
+                    evt.preventDefault();
+                    that.options.filters.data('filters')._resetTicker(that.options.user_list , that.options.selected_list);
+                });
+                // on mets en forme le clone pour qu'il n'apparaisse pas grisé
+                that.options.selected_list.find("li").removeClass("offline-user");
+                that.options.selected_list.find("li").addClass("connected-user");
+                
+                // on change d'onglet
+                var $nav   = $('#player-aside-nav'),
+                    $links = $nav.find('a'),
+                    $tabs  = $('div.player-aside-box-tab'),
+                    box  = "videoticker-comments";
+                        
+                $links.removeClass('active');
+                $links.filter("[data-nav='"+box+"']").addClass('active');
+                
+                $tabs.addClass('hide');
+                $('div.'+box).removeClass('hide');
+            
+            }
+            
+        });
+    },
+    
     _sortRoster: function() {
-        this.options.active_users.find('li').sort(function(a, b){
+        /*this.options.active_users.find('li').sort(function(a, b){
             return $(a).text() > $(b).text() ? 1 : -1;
         }).remove().appendTo(this.options.active_users);
         
         this.options.inactive_users.find('li').sort(function(a, b){
             return $(a).text() > $(b).text() ? 1 : -1;
-        }).remove().appendTo(this.options.inactive_users);
-        
+        }).remove().appendTo(this.options.inactive_users);*/
     },
 
+    _resetTicker: function() {
+        var that = this;
+        that.options.selected_list.find("*").remove();
+        that.options.user_list.find(".active").removeClass("active");
+        that.options.filters.data('filters').filterMessages("all", "text", that.options.lang);
+        that.options.currentFilter = {
+            name: "all",
+            type: "text",
+            language: that.options.lang
+        };
+    },
+    
+    
     _updatePosition: function(item) {
-        
         if ((item.hasClass("user-avatar-personality")) && (item.hasClass("offline-user"))){
             item.appendTo(this.options.speaker_users);
         }
@@ -151,7 +205,7 @@ $.uce.Roster.prototype = {
         else if (item.hasClass("ui-roster-user-you")){
            item.prependTo(this.options.active_users);
         }
-         else if (item.hasClass("connected-user")){
+        else if (item.hasClass("connected-user")){
            item.appendTo(this.options.active_users);
         }
         else item.appendTo(this.options.inactive_users);
@@ -208,9 +262,7 @@ $.uce.Roster.prototype = {
                     return;
                 }
                 // appends new user to roster element
-                var userField = $('<a>');//.attr('href', '/accounts/'+user.name);
-                    userField.text(screenname)
-                    .attr("href","#");
+                var userField = $('<a>').attr("href","#").text(screenname);//.attr('href', '/accounts/'+user.name);
 
                 if (user.metadata && user.metadata.mugshot && user.metadata.mugshot !== "") {
                     userField.prepend($("<figure class='user-avatar'>").append(getMugshot(user.metadata.mugshot)));
@@ -222,25 +274,20 @@ $.uce.Roster.prototype = {
                 var imgField = $('<img>')
                     .attr("alt", "")
                     .attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
+
                 var figureField = $('<figure>')
                     .attr("uid", user.uid)
                     .addClass('user-avatar')
                     .append(imgField)
                     .prependTo(userField);
+
                 var item = $('<li>')
                     .attr("id", user.uid)
-                    .addClass('connected-user')
-                    .append(userField)
-                    .click(function(evt) {
-                        evt.preventDefault();
-                    });
-                
-                for (var i=0; i < that.options.speakers.length; i++) {
-                    if (user.uid == that.options.speakers[i]){
-                        user.speaker = true;
-                    }
-                }
-                if (user.speaker == true) {
+                    .append(userField);
+
+                that._attachClick(item);
+
+                if ($.inArray(user.uid, that.options.speakers) > -1) {
                     item.addClass("user-avatar-personality");
                 }
                 else if (user.uid == that.options.uceclient.uid) {
@@ -251,8 +298,8 @@ $.uce.Roster.prototype = {
             });
         });
     },
+    
     destroy: function() {
-        this.element.removeClass("ui-roster");
         this.element.find('li').remove();
         $.Widget.prototype.destroy.apply(this, arguments); // default destroy
     }
