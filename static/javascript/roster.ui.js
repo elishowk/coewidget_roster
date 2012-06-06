@@ -221,7 +221,7 @@ $.uce.Roster.prototype = {
                 // role information
                 var imgField = $('<img>')
                     .attr("alt", "")
-                    .attr("src", "");
+                    .attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
                 var figureField = $('<figure>')
                     .attr("uid", user.uid)
                     .addClass('user-avatar')
