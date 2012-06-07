@@ -136,20 +136,16 @@ $.uce.Roster.prototype = {
             evt.preventDefault();
             // on vérifie si l'item n'est pas actif -> dans ce cas on le 'désactive'
             if(item.find('a').hasClass('active')){
-                that.options.filters.data('filters')._resetTicker(that.options.user_list , that.options.selected_list);
+                that.options.filters.data('filters')._refreshTicker($(this).attr('id'), "useruid", "all", that.options.user_list , that.options.selected_list);
             }
             // sinon on l'ajoute 
             else {
-                /* Fonction de filtrage simple -> on vire tout filtrage précédent */
-                if(that.options.selected_list.parent().find("li a").hasClass('active')){
-                    that.options.filters.data('filters')._resetTicker(that.options.user_list , that.options.selected_list);
-                }
-                that.options.filters.data('filters').filterMessages($(this).attr('id'), "useruid", "all");
+                that.options.filters.data('filters').filterMessagesAdvanced(true, $(this).attr('id'), "useruid", "all");
                 $(this).find('a').addClass('active');
                 // on créé un clone dans la zone de filtres
                 $(this).clone().appendTo(that.options.selected_list).addClass('clone').on("click", function(evt) {
                     evt.preventDefault();
-                    that.options.filters.data('filters')._resetTicker(that.options.user_list , that.options.selected_list);
+                    that.options.filters.data('filters')._refreshTicker($(this).attr('id'), "useruid", "all", that.options.user_list , that.options.selected_list);
                 });
                 // on mets en forme le clone pour qu'il n'apparaisse pas grisé
                 that.options.selected_list.find("li").removeClass("offline-user");
@@ -166,9 +162,7 @@ $.uce.Roster.prototype = {
                 
                 $tabs.addClass('hide');
                 $('div.'+box).removeClass('hide');
-            
             }
-            
         });
     },
     
@@ -181,19 +175,6 @@ $.uce.Roster.prototype = {
             return $(a).text() > $(b).text() ? 1 : -1;
         }).remove().appendTo(this.options.inactive_users);*/
     },
-
-    _resetTicker: function() {
-        var that = this;
-        that.options.selected_list.find("*").remove();
-        that.options.user_list.find(".active").removeClass("active");
-        that.options.filters.data('filters').filterMessages("all", "text", that.options.lang);
-        that.options.currentFilter = {
-            name: "all",
-            type: "text",
-            language: that.options.lang
-        };
-    },
-    
     
     _updatePosition: function(item) {
         if ((item.hasClass("user-avatar-personality")) && (item.hasClass("offline-user"))){
