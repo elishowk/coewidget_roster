@@ -140,6 +140,9 @@ $.uce.Roster.prototype = {
             }
             // sinon on l'ajoute 
             else {
+                if(that.options.selected_list.parent().find('li a').text() === ""){
+                    that.options.filters.data('filters')._showFilterlist();
+                }
                 that.options.filters.data('filters').filterMessagesAdvanced(true, $(this).attr('id'), "useruid", "all");
                 $(this).find('a').addClass('active');
                 // on créé un clone dans la zone de filtres
