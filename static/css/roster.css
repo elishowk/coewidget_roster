@@ -1,29 +1,40 @@
-	/* ROSTER
-	------------------------- */
+    /* ROSTER
+    ------------------------- */
 
 
 .main-title-users:before {
-	background:url(../images/artpack-player.png) no-repeat -115px -20px;
-	content:'';
-	height:24px;
-	float:left;
-	margin-right:7px;
-	width:24px;
+    background:url(../images/artpack-player.png) no-repeat -115px -20px;
+    content:'';
+    height:24px;
+    float:left;
+    margin-right:7px;
+    width:24px;
 }
 
 
 .sub-title-people:before {
-	background:url(../images/artpack-player.png) no-repeat -64px -41px;
+    background:url(../images/artpack-player.png) no-repeat -64px -41px;
 }
 
-	/* users
-	------------------------- */
-	
+    /* users
+    ------------------------- */
+    
 .users-list {
-	list-style: none;
-	padding:0 21px 20px;
+    list-style: none;
+    padding:0 21px 20px;
 }
 
 .users-list a:hover {
-	color:#d29ae9
+    color:#d29ae9
+}
+
+ /* selected list */
+ 
+.selected-list.selected-users-list {
+    list-style:none;
+    padding:0 0 0 5px;
+}
+
+.selected-list.selected-users-list li {
+    margin-bottom: 2px;
 }
