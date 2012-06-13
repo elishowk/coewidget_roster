@@ -274,8 +274,12 @@ $.uce.Roster.prototype = {
                 if ($.inArray(user.uid, that.options.speakers) > -1) {
                     item.addClass("user-avatar-personality");
                 }
-                else if (user.uid == that.options.uceclient.uid) {
+                if (user.uid == that.options.uceclient.uid) {
                     item.addClass("ui-roster-user-you");
+                    if ($(".form-comment-avatar").hasClass("form-comment-avatar-you")===false){
+                        $(".form-comment-avatar").attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
+                        $(".form-comment-avatar").addClass("form-comment-avatar-you");
+                    }
                 }
                 that._updateUserState(user, item);
                 that._sortRoster();
