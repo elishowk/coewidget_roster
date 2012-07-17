@@ -58,10 +58,11 @@ $.uce.Roster.prototype = {
             roster: null,
             requestRoster: false
         };
+        // TODO affichage initial ? this._updateRoster();
         var that = this;
         this._updateLoop = window.setInterval(function(){
                 that._updateRoster();
-            }, this.options.updateInterval);
+            }, that.options.updateInterval);
     },
     /*
      * Users' state object
@@ -214,20 +215,15 @@ $.uce.Roster.prototype = {
      * Internal method updating display
      */
     _updateRoster: function(event) {
-        
-        this.element.addClass("ui-roster");
-        var meeting = this.options.ucemeeting;
         var users = [];
         $.each(this._state.users, function(uid, user) {
             if(_.isBoolean(user)===false) {
                 users.push(user);
             }
         });
-        
         var me = this._state.users[this.options.uceclient.uid];
         var that = this;
-
-        // requête Async uce
+        // requete Async uce
         this.options.ucemeeting.getRoster(function(err, roster){
             if (err!==null){
                 return;
@@ -289,6 +285,7 @@ $.uce.Roster.prototype = {
     
     destroy: function() {
         this.element.find('li').remove();
+        this.element.removeClass("ui-roster");
         $.Widget.prototype.destroy.apply(this, arguments); // default destroy
     }
 };
