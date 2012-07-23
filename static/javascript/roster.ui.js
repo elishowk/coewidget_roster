@@ -36,7 +36,7 @@ $.uce.Roster.prototype = {
         active_users: $('ul.[data-user-list="online"]'),
         inactive_users: $('ul.[data-user-list="offline"]'),
         speakers: [],
-        updateInterval: 30000,
+        updateInterval: 2000,
         selected_list : $(".selected-users-list"),
         filters: $('#filters'),
         currentFilter: {
@@ -48,7 +48,6 @@ $.uce.Roster.prototype = {
     // ucengine events
     meetingsEvents: {
         "internal.roster.add"           : "_handleJoin",
-        "internal.roster.delete"        : "_handleLeave",
         "internal.roster.update"        : "_updateRoster"
     },
     _create: function() {
@@ -70,51 +69,39 @@ $.uce.Roster.prototype = {
     getUsersState: function() {
         return this._state.users;
     },
-
+    
+    /**
+     * UCE GET user request
+    */
+    _getUserData: function(event) {
+        var that = this;
+        this.options.uceclient.user.get(event.from, function(err, result, xhr) {
+            if (err !== null || result === null) {
+                return;
+            }
+            that._state.users[event.from] = result.result;
+            that.options.ucemeeting.getRoster(function(err, roster){
+                if (err!==null){
+                    return;
+                }
+                that._state.roster=roster;
+                that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
+                that._updateUser(that._state.users[event.from]);
+            });
+        });
+    },
+    
     /**
      * UCE Event handler
      * "internal.roster.add" Event handler
     */
     _handleJoin: function(event) {
-        if (this._state.users[event.from] !== undefined && _.isBoolean(this._state.users[event.from]) === false) {
-            // come back of an old friend
-            this._state.users[event.from].visible = true;
-            return;
-        } 
         if (_.isBoolean(this._state.users[event.from]) === false) {
             // first time for this new user
             // boolean value indicates a request is pending
             this._state.users[event.from] = true;
-            var that = this;
-            this.options.uceclient.user.get(event.from, function(err, result, xhr) {
-                var visible = that._state.users[event.from];
-                if (err !== null) {
-                    return;
-                }
-                if(result === null) {
-                    return;
-                }
-                that._state.users[event.from] = result.result;
-                that._state.users[event.from].visible = visible;
-
-                event.type = "internal.roster.update";
-                that.options.ucemeeting.trigger(event);
-            });
+            this._getUserData(event);
             return;
-        }
-    },
-
-    /**
-    * "internal.roster.delete" Event handler
-    */
-    _handleLeave: function(event) {
-        if (this._state.users[event.from]!==undefined && _.isBoolean(this._state.users[event.from]) === false) {
-            this._state.users[event.from].visible = false;
-            return;
-        } 
-        if (_.isBoolean(this._state.users[event.from]) === false) {
-            // Lock but indicates absence
-            this._state.users[event.from] = false;
         }
     },
 
@@ -130,7 +117,7 @@ $.uce.Roster.prototype = {
     /*  Cette fonction attache au clic sur les utilisateurs
      *  les fonctions de filtrage
      */
-    
+
     _attachClick: function(item) {
         var that = this;
         item.on("click", function(evt){
@@ -170,16 +157,6 @@ $.uce.Roster.prototype = {
         });
     },
     
-    _sortRoster: function() {
-        /*this.options.active_users.find('li').sort(function(a, b){
-            return $(a).text() > $(b).text() ? 1 : -1;
-        }).remove().appendTo(this.options.active_users);
-        
-        this.options.inactive_users.find('li').sort(function(a, b){
-            return $(a).text() > $(b).text() ? 1 : -1;
-        }).remove().appendTo(this.options.inactive_users);*/
-    },
-    
     _updatePosition: function(item) {
         if ((item.hasClass("user-avatar-personality")) && (item.hasClass("offline-user"))){
             item.appendTo(this.options.speaker_users);
@@ -195,22 +172,72 @@ $.uce.Roster.prototype = {
         }
         else item.appendTo(this.options.inactive_users);
     },
+    
+    _updateUser: function(user) {
+        var that = this;
+        // if its anonymous, we don't do anything
+        var screenname = that.getScreenName(user.uid);
+        if(screenname === "" || screenname === "anonymous") {
+            return;
+        }
+        // 1- if user already is in the roster block 
+        if($("#"+user.uid).length > 0) {
+            that._updateUserState(user, $("#"+user.uid), $("#"+user.uid).children("a"));
+            return;
+        }
+        // 2 - if not, appends new user to roster element
+        var userField = $('<a>').attr("href","#").text(screenname);//.attr('href', '/accounts/'+user.name);
+
+            // role information
+        var imgField = $('<img>')
+            .attr("alt", "")
+            .attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
+
+        var figureField = $('<figure>')
+            .attr("uid", user.uid)
+            .addClass('user-avatar')
+            .append(imgField)
+            .prependTo(userField);
+
+        var item = $('<li>')
+            .attr("id", user.uid)
+            .append(userField);
+
+            //donner une action de clic sur l'user
+        that._attachClick(item);
+
+        if ($.inArray(user.uid, that.options.speakers) > -1) {
+            item.addClass("user-avatar-personality");
+        }
+        if (user.uid == that.options.uceclient.uid) {
+            item.addClass("ui-roster-user-you");
+            if ($(".form-comment-avatar").hasClass("form-comment-avatar-you")===false){
+                $(".form-comment-avatar").attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
+                $(".form-comment-avatar").addClass("form-comment-avatar-you");
+            }
+        }
+        that._updateUserState(user, item);
+    },
 
     _updateUserState: function(user , useritem){
         var that = this;
-        for (i=0;i<that._state.roster.length;i++){
-            if (that._state.roster[i].uid==user.uid) {
+        if (that._state.roster === null){
+            useritem.removeClass("connected-user");
+            useritem.addClass("offline-user");
+            that._updatePosition(useritem);
+        } else {
+            if ($.inArray(user.uid, that._state.rosterUidList)>-1) {
                 useritem.removeClass("offline-user");
                 useritem.addClass("connected-user");
                 that._updatePosition(useritem);
-                return;
-            }else {
+            } else {
                 useritem.removeClass("connected-user");
                 useritem.addClass("offline-user");
                 that._updatePosition(useritem);
             }
-        }    
+        }
     },
+
     /**
      * Internal method updating display
      */
@@ -229,56 +256,9 @@ $.uce.Roster.prototype = {
                 return;
             }
             that._state.roster=roster;
+            that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
             $.each(users, function(idx, user) {
-                // Si c'est anonymous on le mets au placard avec Mr Pignon
-                var screenname = that.getScreenName(user.uid);
-                if(screenname === "" || screenname === "anonymous") {
-                    return;
-                }
-                /* if user already in the roster block */
-                if($("#"+user.uid).length > 0) {
-                    that._updateUserState(user, $("#"+user.uid), $("#"+user.uid).children("a"));
-                    that._sortRoster();
-                    return;
-                }
-                // appends new user to roster element
-                var userField = $('<a>').attr("href","#").text(screenname);//.attr('href', '/accounts/'+user.name);
-
-                if (user.metadata && user.metadata.mugshot && user.metadata.mugshot !== "") {
-                    userField.prepend($("<figure class='user-avatar'>").append(getMugshot(user.metadata.mugshot)));
-                } else {
-                    // FIXME
-                    //userField.prepend($("<figure class='user-avatar'>").append(that.options.default_avatar.clone()));
-                }
-                // role information
-                var imgField = $('<img>')
-                    .attr("alt", "")
-                    .attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
-
-                var figureField = $('<figure>')
-                    .attr("uid", user.uid)
-                    .addClass('user-avatar')
-                    .append(imgField)
-                    .prependTo(userField);
-
-                var item = $('<li>')
-                    .attr("id", user.uid)
-                    .append(userField);
-
-                that._attachClick(item);
-
-                if ($.inArray(user.uid, that.options.speakers) > -1) {
-                    item.addClass("user-avatar-personality");
-                }
-                if (user.uid == that.options.uceclient.uid) {
-                    item.addClass("ui-roster-user-you");
-                    if ($(".form-comment-avatar").hasClass("form-comment-avatar-you")===false){
-                        $(".form-comment-avatar").attr("src", "http://www.gravatar.com/avatar/"+user.metadata.md5+"?d=retro");
-                        $(".form-comment-avatar").addClass("form-comment-avatar-you");
-                    }
-                }
-                that._updateUserState(user, item);
-                that._sortRoster();
+                that._updateUser(user);
             });
         });
     },
