@@ -29,8 +29,6 @@ $.uce.Roster.prototype = {
     options: {
         ucemeeting: null,
         uceclient: null,
-        title: "Meeting Roster",
-        default_avatar: null,
         user_list: $('.users-list'),
         speaker_users: $('.users-list:first'),
         active_users: $('ul.[data-user-list="online"]'),
@@ -38,18 +36,15 @@ $.uce.Roster.prototype = {
         speakers: [],
         updateInterval: 15000,
         selected_list : $(".selected-users-list"),
-        filters: $('#filters'),
-        currentFilter: {
-            "name": "all",
-            "type": "any",
-            "language": "any"
-        }
+        filters: $('#filters')
     },
-    // ucengine events
+
+    // ucengine suscribed events
     meetingsEvents: {
         "internal.roster.add"           : "_handleJoin",
         "internal.roster.update"        : "_handleUserData"
     },
+
     _create: function() {
         this._state = {
             anonCounter: 0,
@@ -57,21 +52,36 @@ $.uce.Roster.prototype = {
             roster: null,
             requestRoster: false
         };
-        // TODO affichage initial ? this._updateRoster();
         var that = this;
         this._updateLoop = window.setInterval(function(){
                 that._updateRoster();
             }, that.options.updateInterval);
     },
+
     /*
-     * Users' state object
+     * Public method returning
+     * the users' data list
      */
     getUsersState: function() {
         return this._state.users;
     },
+
+    /*
+     * Public method giving the user's nickname
+     */
+    getScreenName: function(uid) {
+        var user = ( this._state.users[uid] !== undefined ) ? this._state.users[uid] : { name: "" };
+        var screenname = user.name;
+        if (user.metadata !== undefined && user.metadata.username !== undefined) {
+            screenname = user.metadata.username;
+        }
+        return screenname;
+    },
+    
     
     /**
      * UCE GET user request
+     * then triggers the event notifying any widget waiting for the user's data
     */
     _getUserData: function(event) {
         var that = this;
@@ -80,18 +90,9 @@ $.uce.Roster.prototype = {
                 return;
             }
             that._state.users[event.from] = result.result;
-            var it = that;
-            var from = event.from;
-            that.options.ucemeeting.getRoster(function(err, roster){
-                if (err!==null){
-                    return;
-                }
-                it._state.roster=roster;
-                it._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
-                it.options.ucemeeting.trigger({
-                    type: "internal.roster.update",
-                    from: from
-                });
+            that.options.ucemeeting.trigger({
+                type: "internal.roster.update",
+                from: event.from
             });
         });
     },
@@ -101,8 +102,7 @@ $.uce.Roster.prototype = {
      * "internal.roster.add" Event handler
     */
     _handleJoin: function(event) {
-        if (_.isBoolean(this._state.users[event.from]) === false) {
-            // first time for this new user
+        if (typeof this._state.users[event.from] === "undefined") {
             // boolean value indicates a request is pending
             this._state.users[event.from] = true;
             this._getUserData(event);
@@ -117,15 +117,6 @@ $.uce.Roster.prototype = {
         this._updateUser(this._state.users[event.from]);
     },
 
-    getScreenName: function(uid) {
-        var user = ( this._state.users[uid] !== undefined ) ? this._state.users[uid] : { name: "" };
-        var screenname = user.name;
-        if (user.metadata !== undefined && user.metadata.username !== undefined) {
-            screenname = user.metadata.username;
-        }
-        return screenname;
-    },
-    
     /*  Cette fonction attache au clic sur les utilisateurs
      *  les fonctions de filtrage
      */
@@ -169,35 +160,20 @@ $.uce.Roster.prototype = {
         });
     },
     
-    _updatePosition: function(item) {
-        if ((item.hasClass("user-avatar-personality")) && (item.hasClass("offline-user"))){
-            item.appendTo(this.options.speaker_users);
-        }
-        else if (item.hasClass("user-avatar-personality")){
-            item.prependTo(this.options.speaker_users);
-        }
-        else if (item.hasClass("ui-roster-user-you")){
-           item.prependTo(this.options.active_users);
-        }
-        else if (item.hasClass("connected-user")){
-           item.appendTo(this.options.active_users);
-        }
-        else item.appendTo(this.options.inactive_users);
-    },
     
     _updateUser: function(user) {
         var that = this;
-        // if its anonymous, we don't do anything
-        var screenname = that.getScreenName(user.uid);
-        if(screenname === "" || screenname === "anonymous") {
-            return;
-        }
-        // 1- if user already is in the roster block 
+        // if user's already displayed
         if($("#"+user.uid).length > 0) {
             that._updateUserState(user, $("#"+user.uid), $("#"+user.uid).children("a"));
             return;
         }
-        // 2 - if not, appends new user to roster element
+        // if its anonymous, we return
+        var screenname = that.getScreenName(user.uid);
+        if(screenname === "" || screenname === "anonymous") {
+            return;
+        }
+        // finally displays the new user
         var userField = $('<a>').attr("href","#").text(screenname);//.attr('href', '/accounts/'+user.name);
 
             // role information
@@ -215,7 +191,6 @@ $.uce.Roster.prototype = {
             .attr("id", user.uid)
             .append(userField);
 
-            //donner une action de clic sur l'user
         that._attachClick(item);
 
         if ($.inArray(user.uid, that.options.speakers) > -1) {
@@ -231,6 +206,9 @@ $.uce.Roster.prototype = {
         that._updateUserState(user, item);
     },
 
+    /*
+     * Switch classes depending on the user's status
+     */
     _updateUserState: function(user , useritem){
         var that = this;
         if (that._state.roster === null){
@@ -249,9 +227,29 @@ $.uce.Roster.prototype = {
             }
         }
     },
+
+    /*
+     * Position the user
+     */
+    _updatePosition: function(item) {
+        if ((item.hasClass("user-avatar-personality")) && (item.hasClass("offline-user"))){
+            item.appendTo(this.options.speaker_users);
+        }
+        else if (item.hasClass("user-avatar-personality")){
+            item.prependTo(this.options.speaker_users);
+        }
+        else if (item.hasClass("ui-roster-user-you")){
+           item.prependTo(this.options.active_users);
+        }
+        else if (item.hasClass("connected-user")){
+           item.appendTo(this.options.active_users);
+        }
+        else item.appendTo(this.options.inactive_users);
+    },
     
     /**
-     * Internal method updating display
+     * Periodic method updating display
+     * for all users
      */
     _updateRoster: function() {
         var users = [];
