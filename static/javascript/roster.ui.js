@@ -36,7 +36,7 @@ $.uce.Roster.prototype = {
         active_users: $('ul.[data-user-list="online"]'),
         inactive_users: $('ul.[data-user-list="offline"]'),
         speakers: [],
-        updateInterval: 2000,
+        updateInterval: 15000,
         selected_list : $(".selected-users-list"),
         filters: $('#filters'),
         currentFilter: {
@@ -80,15 +80,17 @@ $.uce.Roster.prototype = {
                 return;
             }
             that._state.users[event.from] = result.result;
+            var it = that;
+            var from = event.from;
             that.options.ucemeeting.getRoster(function(err, roster){
                 if (err!==null){
                     return;
                 }
-                that._state.roster=roster;
-                that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
-                that.options.ucemeeting.trigger({
+                it._state.roster=roster;
+                it._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
+                it.options.ucemeeting.trigger({
                     type: "internal.roster.update",
-                    from: event.from
+                    from: from
                 });
             });
         });
@@ -107,7 +109,7 @@ $.uce.Roster.prototype = {
             return;
         }
     },
-        /**
+    /**
      * UCE Event handler
      * "internal.roster.update" Event handler
     */
@@ -116,7 +118,7 @@ $.uce.Roster.prototype = {
     },
 
     getScreenName: function(uid) {
-        var user = ( this._state.users[uid] !== undefined ) ? this._state.users[uid] : { name: ""};
+        var user = ( this._state.users[uid] !== undefined ) ? this._state.users[uid] : { name: "" };
         var screenname = user.name;
         if (user.metadata !== undefined && user.metadata.username !== undefined) {
             screenname = user.metadata.username;
