@@ -48,7 +48,7 @@ $.uce.Roster.prototype = {
     // ucengine events
     meetingsEvents: {
         "internal.roster.add"           : "_handleJoin",
-        "internal.roster.update"        : "_updateRoster"
+        "internal.roster.update"        : "_handleUserData"
     },
     _create: function() {
         this._state = {
@@ -86,7 +86,10 @@ $.uce.Roster.prototype = {
                 }
                 that._state.roster=roster;
                 that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
-                that._updateUser(that._state.users[event.from]);
+                that.options.ucemeeting.trigger({
+                    type: "internal.roster.update",
+                    from: event.from
+                });
             });
         });
     },
@@ -103,6 +106,13 @@ $.uce.Roster.prototype = {
             this._getUserData(event);
             return;
         }
+    },
+        /**
+     * UCE Event handler
+     * "internal.roster.update" Event handler
+    */
+    _handleUserData: function(event) {
+        this._updateUser(this._state.users[event.from]);
     },
 
     getScreenName: function(uid) {
@@ -237,11 +247,11 @@ $.uce.Roster.prototype = {
             }
         }
     },
-
+    
     /**
      * Internal method updating display
      */
-    _updateRoster: function(event) {
+    _updateRoster: function() {
         var users = [];
         $.each(this._state.users, function(uid, user) {
             if(_.isBoolean(user)===false) {

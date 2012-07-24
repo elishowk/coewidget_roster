@@ -138,6 +138,7 @@ test("_handleLeave unknown user", function() {
     }
 });
 */
+
 test("user is complete", function() {
     expect(4);
     // nettoyage
@@ -177,6 +178,7 @@ test("user is connected", function() {
         $('#roster').data("roster")._state.roster = [];
     }
     $('#roster').data("roster")._state.roster.push(MockUser);
+	$('#roster').data("roster")._state.rosterUidList = $.map($('#roster').data("roster")._state.roster, function(connecteduser){ return connecteduser.uid });
     $('#roster').data("roster")._updateUser(MockUser);
     equal($("#"+MockUser.uid).length, 1, "User exist");
     equal($("#"+MockUser.uid).hasClass("connected-user"), true, "User is online");
