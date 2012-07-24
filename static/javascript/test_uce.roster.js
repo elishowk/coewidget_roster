@@ -78,81 +78,20 @@ Factories.updateRosterEvent = function(from) {
     };
 }
 
-/*test("_handleJoin known user", function() {
-    expect(1);
-    event = MockEventAdd;
-    $('#roster').data("roster")._state.users[event.from] = {};
-    if ($('#roster').data("roster")._state.users[event.from] !== undefined && _.isBoolean($('#roster').data("roster")._state.users[event.from]) === false) {
-        $('#roster').data("roster")._state.users[event.from].visible = true;
-        equal($("#"+MockUser.uid).length > 0 , true, "User known and visible");
-        return;
-    } 
-});*/
-
-/*test("_handleJoin unknown user", function() {
-    expect(1);
-    event = MockEventAdd;
-    $('#roster').data("roster")._state.users[event.from] = undefined;
-    if (_.isBoolean($('#roster').data("roster")._state.users[event.from]) === false) {
-        $('#roster').data("roster")._state.users[event.from] = true;
-        
-        var that = $('#roster').data("roster");
-        var visible = that._state.users[event.from];
-    
-        that._state.users[event.from] = MockUser;
-        that._state.users[event.from].visible = visible;
-        event.type = "internal.roster.update";
-        that.options.ucemeeting.trigger(event);
-        // tests
-        equal($("#"+MockUser.uid).length > 0 , true, "visible");
-        return;
-    }
-});*/
-
-/*test("_handleLeave known user", function() {
-    expect(1);
-    event = MockEvent;
-    $('#roster').data("roster")._state.users[event.from] = {};
-    if ($('#roster').data("roster")._state.users[event.from]!==undefined && _.isBoolean($('#roster').data("roster")._state.users[event.from]) === false) {
-        $('#roster').data("roster")._state.users[event.from].visible = false;
-        equal($('#roster').data("roster")._state.users[event.from].visible, false, "User known not visible (left)");
-        return;
-    } 
-    if (_.isBoolean($('#roster').data("roster")._state.users[event.from]) === false) {
-        $('#roster').data("roster")._state.users[event.from] = false;
-    }
-});
-
-test("_handleLeave unknown user", function() {
-    expect(1);
-    event = MockEvent;
-    $('#roster').data("roster")._state.users[event.from] = undefined;
-    if ($('#roster').data("roster")._state.users[event.from]!==undefined && _.isBoolean($('#roster').data("roster")._state.users[event.from]) === false) {
-        $('#roster').data("roster")._state.users[event.from].visible = false;
-        return;
-    } 
-    if (_.isBoolean($('#roster').data("roster")._state.users[event.from]) === false) {
-        // Lock but indicates absence
-        $('#roster').data("roster")._state.users[event.from] = false;
-        equal($('#roster').data("roster")._state.users[event.from], false, "User Unknown left");
-    }
-});
-*/
-
 test("user is complete", function() {
-    expect(4);
+    expect(5);
     // nettoyage
     $("#"+MockUser.uid).remove();
     $('#roster').data("roster")._state.users[MockUser.uid]=MockUser;
     // test
     $('#roster').data("roster")._updateUser(MockUser);
     notEqual($("#"+MockUser.uid).length, 0, "User exist");
+    equal($("#"+MockSpeaker.uid).hasClass("user-avatar-personality"), false, "User is not in speaker section");
     /// tester la présence d'un nom 
     notEqual($("#"+MockUser.uid).find('a').text().length, 0, "User has a name");
     equal($("#"+MockUser.uid).find('a').text()===MockUser.name, true, "User has the good name");
     /// tester la présence d'un avatar 
     notEqual($("#"+MockUser.uid).find('img').attr('src').length, 0, "User has an avatar");
-
 });
 
 test("speaker is in the right place", function() {
@@ -168,18 +107,32 @@ test("speaker is in the right place", function() {
     equal($("#"+MockSpeaker.uid).find('img').css('box-shadow')==="none", false, "Speaker has blue shadow");
 });
 
-test("user is connected", function() {
-    expect(2);
+test("user connection", function() {
+    expect(6);
     // nettoyage
     $("#"+MockUser.uid).remove();
     $('#roster').data("roster")._state.users[MockUser.uid]=MockUser;
     // test
-    if ($('#roster').data("roster")._state.roster === null){
+	if ($('#roster').data("roster")._state.roster === null){
         $('#roster').data("roster")._state.roster = [];
     }
+	//connecté
     $('#roster').data("roster")._state.roster.push(MockUser);
-	$('#roster').data("roster")._state.rosterUidList = $.map($('#roster').data("roster")._state.roster, function(connecteduser){ return connecteduser.uid });
+    $('#roster').data("roster")._state.rosterUidList = $.map($('#roster').data("roster")._state.roster, function(connecteduser){ return connecteduser.uid });
     $('#roster').data("roster")._updateUser(MockUser);
-    equal($("#"+MockUser.uid).length, 1, "User exist");
-    equal($("#"+MockUser.uid).hasClass("connected-user"), true, "User is online");
+    equal($("#"+MockUser.uid).length, 1, "User is visible (online test)");
+    equal($("#"+MockUser.uid).hasClass("connected-user"), true, "User is online (has class online)");
+    equal($("#"+MockUser.uid).hasClass("offline-user"), false, "User is online (has not class offline)");
+	// déconnecté
+	$('#roster').data("roster")._state.roster = jQuery.grep($('#roster').data("roster")._state.roster, function(value) {
+          return value != MockUser;
+        });
+	$('#roster').data("roster")._state.rosterUidList = $.map($('#roster').data("roster")._state.roster, function(connecteduser){ return connecteduser.uid });
+	$('#roster').data("roster")._updateUser(MockUser);
+	equal($("#"+MockUser.uid).length, 1, "User is visible (offline test)");
+    equal($("#"+MockUser.uid).hasClass("connected-user"), false, "User is offline (has not class online)");
+    equal($("#"+MockUser.uid).hasClass("offline-user"), true, "User is offline (has class offline)");
 });
+
+
+
