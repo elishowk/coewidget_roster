@@ -134,5 +134,21 @@ test("user connection", function() {
     equal($("#"+MockUser.uid).hasClass("offline-user"), true, "User is offline (has class offline)");
 });
 
+test("user click test", function() {
+    expect(8);
+    // nettoyage
+	equal($("#"+MockUser.uid).length, 1, "User is visible");
+	//filtrage
+	$("#"+MockUser.uid).trigger('click');
+	equal($('#player-aside-nav [data-nav="videoticker-comments"]').hasClass("active"), true, "Tab switched (comments tab active)");
+	equal($('#player-aside-nav [data-nav="videoticker-users"]').hasClass("active"), false, "Tab switched (roster tab not active)");
+	equal($(".clone[id='"+MockUser.uid+"']").length, 1, "Clone of selected user exist");
+    notEqual($(".clone[id='"+MockUser.uid+"']").find('a').text().length, 0, "Clone has a name");
+    equal($(".clone[id='"+MockUser.uid+"']").find('a').text()===MockUser.name, true, "Clone has the good name");
+    notEqual($(".clone[id='"+MockUser.uid+"']").find('img').attr('src').length, 0, "Clone has an avatar");
+	// "dé"-filtrage
+	$(".clone[id='"+MockUser.uid+"']").trigger('click');	
+	notEqual($(".clone[id='"+MockUser.uid+"']").length, 1, "Clone of selected user is well suppressed after click");
+});
 
 
