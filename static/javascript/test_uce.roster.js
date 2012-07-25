@@ -1,53 +1,69 @@
-/*module("uce.roster", {teardown: function() {
-    $('#roster').roster('destroy');
-}});
+module("uce.roster", {});
+
+var MockEventAdd = {
+    datetime: 1338893773158,
+    domain: "localhost",
+    from: "18888444472920958972084000340434",
+    id: "36386467112457370042912441088531",
+    location: "demo5",
+    type: "internal.roster.add"
+};
+
+var MockSpeaker = {
+    auth: "password",
+    domain: "localhost",
+    metadata: {
+        first_name: "Super",
+        groups: "participant",
+        id: "100",
+        is_active: "true",
+        is_staff: "false",
+        is_superuser: "false",
+        language: "fr",
+        last_name: "Patient",
+        md5: "c1b1a75b5512ba49f6ec6228db754784",
+        ucengine_uid: "18888504972920958972084000340434",
+        user_id: "100",
+        username: "QunitSpeaker"
+    },
+    name: "QunitSpeaker",
+    uid: "18888504972920958972084000340434",
+    visible: true
+};
+
+// we go on the roster tab
+$('#player-aside-nav [data-nav="videoticker-users"]').click();
+
+var MockUser = {
+    auth: "password",
+    domain: "localhost",
+    metadata: {
+        first_name: "Ultra",
+        groups: "participant",
+        id: "101",
+        is_active: "true",
+        is_staff: "false",
+        is_superuser: "false",
+        language: "fr",
+        last_name: "Cool",
+        md5: "c1b1d75b5f12ba49f6ec6228db754984",
+        ucengine_uid: "18888444472920958972084000340434",
+        user_id: "101",
+        username: "QunitUser"
+    },
+    name: "QunitUser",
+    uid: "18888444472920958972084000340434",
+    visible: true
+};
+
+if (Factories===undefined) {
+    var Factories = {};
+}
 
 Factories.addRosterEvent = function(from) {
     return {
         type: "internal.roster.add",
         from: from
-    };
-}
-
-Factories.updateNicknameEvent = function(from, nickname) {
-    return {
-        type: "roster.nickname.update",
-        from: from,
-        metadata: {nickname: nickname}
-    };
-}
-
-Factories.addUserRoleEvent = function(from, user, role) {
-    return {
-        type: "internal.user.role.add",
-        from: from,
-        metadata: {user: user,
-                   role: role}
-    };
-}
-
-Factories.deleteUserRoleEvent = function(from, user, role) {
-    return {
-        type: "internal.user.role.delete",
-        from: from,
-        metadata: {user: user,
-                   role: role}
-    };
-}
-
-Factories.requestLeadEvent = function(from) {
-    return {
-        type: "meeting.lead.request",
-        from: from,
-        metadata: {}
-    };
-}
-
-Factories.refuseLeadEvent = function(from, user) {
-    return {
-        type: "meeting.lead.refuse",
-        from: from,
-        metadata: {user: user}
     };
 }
 
@@ -58,414 +74,88 @@ Factories.deleteRosterEvent = function(from) {
     };
 }
 
-test("create some elements", function() {
-    $('#roster').roster();
-    ok($('#roster').hasClass("ui-roster"), "should have class ui-roster");
-    ok($('#roster').hasClass("ui-widget"), "should have class ui-widget");
-    equals($('#roster').children().size(), 2);
-    equals($("#roster .ui-widget-content").children().size(), 4);
+Factories.updateRosterEvent = function(from) {
+    return {
+        type: "internal.roster.update",
+        from: from
+    };
+}
+
+test("User is complete", function() {
+    expect(5);
+    // Initialize
+    $('#roster').data("roster")._state.users[MockUser.uid] = MockUser;
+    $('#roster').data("roster")._updateUser(MockUser);
+    // Testing
+    notEqual($("#"+MockUser.uid).length, 0, "User exist");
+    equal($("#"+MockSpeaker.uid).hasClass("user-avatar-personality"), false, "User is not in speaker section");
+    notEqual($("#"+MockUser.uid).find('a').text().length, 0, "User has a name");
+    equal($("#"+MockUser.uid).find('a').text()===MockUser.name, true, "User has the good name");
+    notEqual($("#"+MockUser.uid).find('img').attr('src').length, 0, "User has an avatar");
+    // Cleaning
+    $("#"+MockUser.uid).remove();
 });
 
-test("destroy delete all elements", function() {
-    $('#roster').roster();
-    $('#roster').roster("destroy");
-    ok(!$('#roster').hasClass("ui-roster"), "should not have class ui-roster");
-    ok(!$('#roster').hasClass("ui-widget"), "should not have class ui-widget");
-    equals($('#roster > *').size(), 0);
-});
-
-module("uce.roster", {
-    setup: function() {
-        var that = this;
-        this.ucemeeting = {
-            name: "testmeeting",
-            on: function(eventName, callback) {
-                if (eventName == "internal.roster.add") {
-                    that.callback_roster_add = callback;
-                } else if (eventName == "internal.roster.delete") {
-                    that.callback_roster_delete = callback;
-                } else if (eventName == "internal.user.role.add") {
-                    that.callback_role_add = callback;
-                } else if (eventName == "internal.user.role.delete") {
-                    that.callback_role_delete = callback;
-                } else if (eventName == "meeting.lead.request") {
-                    that.callback_lead_request = callback;
-                } else if (eventName == "meeting.lead.refuse") {
-                    that.callback_lead_refuse = callback;
-                } else if (eventName == "roster.nickname.update") {
-                    that.callback_nickname_update = callback;
-                }
-            }
-        };
-        $('#roster').roster({
-            ucemeeting: this.ucemeeting,
-            uceclient: {uid: 'chuck'},
-            url: 'my sweet url',
-            code: '1234'
-        });
-    },
-    teardown: function() {
-        $('#roster').roster('destroy');
-    }});
-
-test("clear the widget", function() {
-    $('#roster').roster('clear');
-    equals($("#roster .ui-roster-roster").children().size(), 0);
-});
-
-test("handle join", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-});
-
-test("handle duplicate participant", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-});
-
-test("handle leave", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-
-    this.callback_roster_delete(Factories.deleteRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster").children().size(), 0);
-});
-
-test("handle internal.user.role.add event", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'You');
-
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'chuck', 'speaker'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'Speaker');
-});
-
-test("handle internal.user.role.delete event", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'chuck', 'speaker'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'Speaker');
-    this.callback_role_delete(Factories.deleteUserRoleEvent('god', 'chuck', 'speaker'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'You');
-});
-
-test("show the number of users", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-    equals($("#roster .ui-roster-roster-header h1").text(), 'Connected users (2)');
-
-    this.callback_roster_delete(Factories.deleteRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster-header h1").text(), 'Connected users (1)');
-});
-
-test("sort roster correctly", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_roster_add(Factories.addRosterEvent('speaker'));
-    this.callback_roster_add(Factories.addRosterEvent('participant1'));
-    this.callback_roster_add(Factories.addRosterEvent('participant2'));
-    this.callback_roster_add(Factories.addRosterEvent('owner'));
-
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'owner', 'owner'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'speaker', 'speaker'));
-
-    this.callback_nickname_update(Factories.updateNicknameEvent('chuck', 'Z'));
-    this.callback_nickname_update(Factories.updateNicknameEvent('speaker', 'Y'));
-    this.callback_nickname_update(Factories.updateNicknameEvent('participant1', 'B'));
-    this.callback_nickname_update(Factories.updateNicknameEvent('participant2', 'A'));
-    this.callback_nickname_update(Factories.updateNicknameEvent('owner', 'X'));
-
-    equals($("#roster .ui-roster-roster").children().size(), 5);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Z');
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'You');
-    equals($("#roster .ui-roster-roster li:eq(1) .ui-roster-user").text(), 'X');
-    equals($("#roster .ui-roster-roster li:eq(1) .ui-roster-role").text(), 'Owner');
-    equals($("#roster .ui-roster-roster li:eq(2) .ui-roster-user").text(), 'Y');
-    equals($("#roster .ui-roster-roster li:eq(2) .ui-roster-role").text(), 'Speaker');
-    equals($("#roster .ui-roster-roster li:eq(3) .ui-roster-user").text(), 'A');
-    equals($("#roster .ui-roster-roster li:eq(3) .ui-roster-role").text(), '');
-    equals($("#roster .ui-roster-roster li:eq(4) .ui-roster-user").text(), 'B');
-    equals($("#roster .ui-roster-roster li:eq(4) .ui-roster-role").text(), '');
-});
-
-test("handle roster.nickame.update event", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_nickname_update(Factories.updateNicknameEvent('chuck', 'Chuck Norris'));
-    equals($("#roster .ui-roster-roster").children().size(), 1);
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Chuck Norris');
-});
-
-jackTest("push a roster.nickname.update event after changing our nickname", function() {
-    var ucemeeting = jack.create("ucemeeting", ['push']);
-    jack.expect("ucemeeting.push")
-        .exactly("1 time")
-        .mock(function(type, metadata) {
-            equals(type, "roster.nickname.update");
-            equals(metadata.nickname, "Chuck Norris");
-        });
-    ucemeeting.on = this.ucemeeting.on;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: {uid: 'chuck'}
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user").click();
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").val("Chuck Norris");
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").trigger("blur");
-});
-
-jackTest("don't push an event if setting the same nickname or an empty nickname", function() {
-    var ucemeeting = jack.create("ucemeeting", ['push']);
-    jack.expect("ucemeeting.push")
-        .exactly("1 time");
-    ucemeeting.on = this.ucemeeting.on;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: {uid: 'chuck'}
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Unnamed 1');
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user").click();
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").val("Chuck Norris");
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").trigger("blur");
-
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user").click();
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").val("Chuck Norris");
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").trigger("blur");
-
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user").click();
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").val("");
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user input").trigger("blur");
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-user").text(), 'Chuck Norris');
-});
-
-jackTest("send a chat.private.start event when clicking on a user", function() {
+test("Speaker is in the right place", function() {
     expect(3);
-    var ucemeeting = jack.create("ucemeeting", ['trigger']);
-    jack.expect("ucemeeting.trigger")
-        .exactly("1 time")
-        .mock(function(event) {
-            equals(event.type, "chat.private.start");
-            equals(event.metadata.interlocutor, "brucelee");
+    // Initialize
+    $('#roster').data("roster")._state.users[MockSpeaker.uid] = MockSpeaker;
+    $('#roster').data("roster").options.speakers.push(MockSpeaker.uid);
+    $('#roster').data("roster")._updateUser(MockSpeaker);
+    // Testing
+    equal($("#"+MockSpeaker.uid).length, 1, "Speaker exist");
+    equal($("#"+MockSpeaker.uid).hasClass("user-avatar-personality"), true, "Speaker has class personality");
+    equal($("#"+MockSpeaker.uid).find('img').css('box-shadow')==="none", false, "Speaker has blue shadow");
+    // Cleaning
+    $("#"+MockSpeaker.uid).remove();
+});
+
+test("User connection", function() {
+    expect(6);
+    // Initialize
+    $('#roster').data("roster")._state.users[MockUser.uid] = MockUser;
+    if ($('#roster').data("roster")._state.roster === null){
+        $('#roster').data("roster")._state.roster = [];
+    }
+    // Online
+    $('#roster').data("roster")._state.roster.push(MockUser);
+    $('#roster').data("roster")._state.rosterUidList = $.map($('#roster').data("roster")._state.roster, function(connecteduser){ return connecteduser.uid });
+    $('#roster').data("roster")._updateUser(MockUser);
+    equal($("#"+MockUser.uid).length, 1, "User is visible (online test)");
+    equal($("#"+MockUser.uid).hasClass("connected-user"), true, "User is online (has class online)");
+    equal($("#"+MockUser.uid).hasClass("offline-user"), false, "User is online (has not class offline)");
+    // Offline
+    $('#roster').data("roster")._state.roster = jQuery.grep($('#roster').data("roster")._state.roster, function(value) {
+          return value != MockUser;
         });
-    ucemeeting.on = this.ucemeeting.on;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: {uid: 'chuck'}
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-user").click();
+    $('#roster').data("roster")._state.rosterUidList = $.map($('#roster').data("roster")._state.roster, function(connecteduser){ return connecteduser.uid });
+    $('#roster').data("roster")._updateUser(MockUser);
+    equal($("#"+MockUser.uid).length, 1, "User is visible (offline test)");
+    equal($("#"+MockUser.uid).hasClass("connected-user"), false, "User is offline (has not class online)");
+    equal($("#"+MockUser.uid).hasClass("offline-user"), true, "User is offline (has class offline)");
+    // Cleaning
+    $("#"+MockUser.uid).remove();
 });
 
-jackTest("send a meeting.lead.request event when clicking on the 'Request Lead' button", function() {
-    expect(2);
-    var ucemeeting = jack.create("ucemeeting", ['push']);
-    jack.expect("ucemeeting.push")
-        .exactly("1 time")
-        .mock(function(type) {
-            equals(type, "meeting.lead.request");
-        });
-    ucemeeting.on = this.ucemeeting.on;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: {uid: 'chuck'}
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    $("#roster .ui-roster-roster li:eq(0) .ui-roster-lead-button").click();
+test("User click test", function() {
+    expect(8);
+    // Initialize
+    $('#roster').data("roster")._state.users[MockUser.uid] = MockUser;
+    $('#roster').data("roster")._updateUser(MockUser);
+    equal($("#"+MockUser.uid).length, 1, "User is visible");
+    // Filtering
+    $("#"+MockUser.uid).trigger('click');
+    equal($('#player-aside-nav [data-nav="videoticker-comments"]').hasClass("active"), true, "Tab switched (comments tab active)");
+    equal($('#player-aside-nav [data-nav="videoticker-users"]').hasClass("active"), false, "Tab switched (roster tab not active)");
+    equal($(".clone[id='"+MockUser.uid+"']").length, 1, "Clone of selected user exist");
+    notEqual($(".clone[id='"+MockUser.uid+"']").find('a').text().length, 0, "Clone has a name");
+    equal($(".clone[id='"+MockUser.uid+"']").find('a').text()===MockUser.name, true, "Clone has the good name");
+    notEqual($(".clone[id='"+MockUser.uid+"']").find('img').attr('src').length, 0, "Clone has an avatar");
+    // Unfiltering
+    $(".clone[id='"+MockUser.uid+"']").trigger('click');    
+    notEqual($(".clone[id='"+MockUser.uid+"']").length, 1, "Clone of selected user is well suppressed after click");
+    // Cleaning
+    $("#"+MockUser.uid).remove();
 });
 
-test("display a message after a meeting.lead.request is received from us", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_lead_request(Factories.requestLeadEvent('chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'Lead Request Pending');
-});
 
-test("display a choice after a meeting.lead.request is sent to the owner", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'chuck', 'owner'));
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-    this.callback_lead_request(Factories.requestLeadEvent('brucelee'));
-
-    equals($("#roster .ui-roster-roster li:eq(1) .ui-roster-lead-button").size(), 2);
-    ok($("#roster .ui-roster-roster li:eq(1) .ui-roster-lead-button:eq(0) span").hasClass('ui-icon-circle-close'));
-    ok($("#roster .ui-roster-roster li:eq(1) .ui-roster-lead-button:eq(1) span").hasClass('ui-icon-circle-check'));
-});
-
-jackTest("send a meeting.lead.refuse event when clicking on the refusal pictogram", function() {
-    expect(3);
-    var ucemeeting = jack.create("ucemeeting", ['push']);
-    jack.expect("ucemeeting.push")
-        .exactly("1 time")
-        .mock(function(type, metadata) {
-            equals(type, "meeting.lead.refuse");
-            equals(metadata.user, "brucelee");
-        });
-    ucemeeting.on = this.ucemeeting.on;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: {uid: 'chuck'}
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'chuck', 'owner'));
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-    this.callback_lead_request(Factories.requestLeadEvent('brucelee'));
-
-    $("#roster .ui-roster-roster li:eq(1) .ui-roster-lead-button:eq(0)").click();
-});
-
-test("display back the 'Lead Request' button after the user received a meeting.lead.refuse event", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'brucelee', 'owner'));
-
-    this.callback_lead_request(Factories.requestLeadEvent('chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'Lead Request Pending');
-
-    this.callback_lead_refuse(Factories.refuseLeadEvent('brucelee', 'chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'You');
-});
-
-test("ignore meeting.lead.refuse event from non-owner", function() {
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-
-    this.callback_lead_request(Factories.requestLeadEvent('chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'Lead Request Pending');
-
-    this.callback_lead_refuse(Factories.refuseLeadEvent('brucelee', 'chuck'));
-    equals($("#roster .ui-roster-roster li:eq(0) .ui-roster-role").text(), 'Lead Request Pending');
-});
-
-jackTest("add the 'speaker' role when clicking on the 'Give Lead' button", function() {
-    expect(7);
-    var userMock = jack.create("user", ['addRole', 'delRole']);
-    jack.expect("user.addRole")
-        .exactly("1 time")
-        .mock(function(uid, role, location, callback) {
-            equals(uid, "brucelee");
-            equals(role, "speaker");
-            equals(location, "testmeeting");
-        });
-    jack.expect("user.delRole")
-        .exactly("1 time")
-        .mock(function(uid, role, location, callback) {
-            equals(uid, "jcvd");
-            equals(role, "speaker");
-            equals(location, "testmeeting");
-        });
-    var uceclient = {uid: "chuck", user: userMock};
-
-    $('#roster').roster({
-        ucemeeting: this.ucemeeting,
-        uceclient: uceclient
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'chuck', 'owner'));
-
-    this.callback_roster_add(Factories.addRosterEvent('jcvd'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'jcvd', 'speaker'));
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-
-    $("#roster .ui-roster-roster li:eq(2) .ui-roster-lead-button").click();
-});
-
-jackTest("add the 'speaker' role when clicking on the accept pictogram", function() {
-    expect(7);
-    var userMock = jack.create("user", ['addRole', 'delRole']);
-    jack.expect("user.addRole")
-        .exactly("1 time")
-        .mock(function(uid, role, location, callback) {
-            equals(uid, "brucelee");
-            equals(role, "speaker");
-            equals(location, "testmeeting");
-        });
-    jack.expect("user.delRole")
-        .exactly("1 time")
-        .mock(function(uid, role, location, callback) {
-            equals(uid, "jcvd");
-            equals(role, "speaker");
-            equals(location, "testmeeting");
-        });
-
-    var uceclient = {uid: "chuck", user: userMock};
-    var ucemeeting = jack.create("ucemeeting", ['push']);
-    ucemeeting.on = this.ucemeeting.on;
-    ucemeeting.name = this.ucemeeting.name;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: uceclient
-    });
-
-    this.callback_roster_add(Factories.addRosterEvent('chuck'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'chuck', 'owner'));
-
-    this.callback_roster_add(Factories.addRosterEvent('jcvd'));
-    this.callback_role_add(Factories.addUserRoleEvent('god', 'jcvd', 'speaker'));
-
-    this.callback_roster_add(Factories.addRosterEvent('brucelee'));
-    this.callback_lead_request(Factories.requestLeadEvent('brucelee'));
-
-    $("#roster .ui-roster-roster li:eq(2) .ui-roster-lead-button:eq(1)").click();
-});
-
-test("Switch between views when clicking on the invite or roster link", function() {
-    var ucemeeting = jack.create("ucemeeting", ['push']);
-    ucemeeting.on = this.ucemeeting.on;
-    ucemeeting.name = this.ucemeeting.name;
-
-    $('#roster').roster({
-        ucemeeting: ucemeeting,
-        uceclient: {uid: 'chuck'}
-    });
-
-    equals($('#roster .ui-roster-roster-header').css('display'), 'block');
-    equals($('#roster .ui-roster-roster').css('display'), 'block');
-    equals($('#roster .ui-roster-invite-header').css('display'), 'none');
-    equals($('#roster .ui-roster-invite').css('display'), 'none');
-
-    $('#roster .ui-roster-invite-link').click();
-
-    equals($('#roster .ui-roster-roster-header').css('display'), 'none');
-    equals($('#roster .ui-roster-roster').css('display'), 'none');
-    equals($('#roster .ui-roster-invite-header').css('display'), 'block');
-    equals($('#roster .ui-roster-invite').css('display'), 'block');
-
-    $('#roster .ui-roster-roster-link').click();
-
-    equals($('#roster .ui-roster-roster-header').css('display'), 'block');
-    equals($('#roster .ui-roster-roster').css('display'), 'block');
-    equals($('#roster .ui-roster-invite-header').css('display'), 'none');
-    equals($('#roster .ui-roster-invite').css('display'), 'none');
-});
-
-test("Give an url and a code to the widget so the fields will be pre-filled", function() {
-    equals($('#roster .ui-roster-url').val(), 'my sweet url');
-    equals($('#roster .ui-roster-code').val(), '1234');
-});*/
