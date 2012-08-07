@@ -1,69 +1,35 @@
 module("uce.roster", {});
 
-var MockEventAdd = {
-    datetime: 1338893773158,
-    domain: "localhost",
-    from: "18888444472920958972084000340434",
-    id: "36386467112457370042912441088531",
-    location: "demo5",
-    type: "internal.roster.add"
-};
-
-var MockSpeaker = {
-    auth: "password",
-    domain: "localhost",
-    metadata: {
-        first_name: "Super",
-        groups: "participant",
-        id: "100",
-        is_active: "true",
-        is_staff: "false",
-        is_superuser: "false",
-        language: "fr",
-        last_name: "Patient",
-        md5: "c1b1a75b5512ba49f6ec6228db754784",
-        ucengine_uid: "18888504972920958972084000340434",
-        user_id: "100",
-        username: "QunitSpeaker"
-    },
-    name: "QunitSpeaker",
-    uid: "18888504972920958972084000340434",
-    visible: true
-};
-
-// we go on the roster tab
-$('#player-aside-nav [data-nav="videoticker-users"]').click();
-
-var MockUser = {
-    auth: "password",
-    domain: "localhost",
-    metadata: {
-        first_name: "Ultra",
-        groups: "participant",
-        id: "101",
-        is_active: "true",
-        is_staff: "false",
-        is_superuser: "false",
-        language: "fr",
-        last_name: "Cool",
-        md5: "c1b1d75b5f12ba49f6ec6228db754984",
-        ucengine_uid: "18888444472920958972084000340434",
-        user_id: "101",
-        username: "QunitUser"
-    },
-    name: "QunitUser",
-    uid: "18888444472920958972084000340434",
-    visible: true
-};
-
 if (Factories===undefined) {
     var Factories = {};
 }
 
+Factories.getMockUser = function(username, uid, firstname, lastname) {
+    return {
+        auth: "password",
+        domain: "localhost",
+        metadata: {
+            first_name: firstname,
+            groups: "participant",
+            language: "fr",
+            last_name: lastname,
+            md5: "c1b1a75b5512ba49f6ec6228db754784",
+            ucengine_uid: uid,
+            username: username
+        },
+        name: username,
+        uid: uid
+    };
+}
+
 Factories.addRosterEvent = function(from) {
     return {
-        type: "internal.roster.add",
-        from: from
+        datetime: Date.now(),
+        domain: "localhost",
+        from: from,
+        id: (Date.now()+Math.random()*2000).toFixed(0).toString(),
+        location: "demo5",
+        type: "internal.roster.add"
     };
 }
 
@@ -82,23 +48,26 @@ Factories.updateRosterEvent = function(from) {
 }
 
 test("User is complete", function() {
-    expect(5);
+    expect(6);
     // Initialize
+    var MockUser = Factories.getMockUser("QunitUser", "18888444472920958972084000340434", "Ultra", "Cool")
     $('#roster').data("roster")._state.users[MockUser.uid] = MockUser;
     $('#roster').data("roster")._updateUser(MockUser);
     // Testing
     notEqual($("#"+MockUser.uid).length, 0, "User exist");
-    equal($("#"+MockSpeaker.uid).hasClass("user-avatar-personality"), false, "User is not in speaker section");
+    equal($("#"+MockUser.uid).hasClass("user-avatar-personality"), false, "User is not in speaker section");
     notEqual($("#"+MockUser.uid).find('a').text().length, 0, "User has a name");
     equal($("#"+MockUser.uid).find('a').text()===MockUser.name, true, "User has the good name");
     notEqual($("#"+MockUser.uid).find('img').attr('src').length, 0, "User has an avatar");
     // Cleaning
     $("#"+MockUser.uid).remove();
+	equal($("#"+MockUser.uid).length, 0, "User deleted");
 });
 
 test("Speaker is in the right place", function() {
     expect(3);
     // Initialize
+    var MockSpeaker = Factories.getMockUser("QunitSpeaker", "18888504972920958972084000340434", "Super", "Patient")
     $('#roster').data("roster")._state.users[MockSpeaker.uid] = MockSpeaker;
     $('#roster').data("roster").options.speakers.push(MockSpeaker.uid);
     $('#roster').data("roster")._updateUser(MockSpeaker);
@@ -109,10 +78,11 @@ test("Speaker is in the right place", function() {
     // Cleaning
     $("#"+MockSpeaker.uid).remove();
 });
-
+/*
 test("User connection", function() {
     expect(6);
     // Initialize
+    var MockUser = Factories.getMockUser("QunitUser", "18888444472920958972084000340434", "Ultra", "Cool")
     $('#roster').data("roster")._state.users[MockUser.uid] = MockUser;
     if ($('#roster').data("roster")._state.roster === null){
         $('#roster').data("roster")._state.roster = [];
@@ -135,11 +105,13 @@ test("User connection", function() {
     equal($("#"+MockUser.uid).hasClass("offline-user"), true, "User is offline (has class offline)");
     // Cleaning
     $("#"+MockUser.uid).remove();
-});
+});*/
 
 test("User click test", function() {
     expect(8);
     // Initialize
+    $('#player-aside-nav [data-nav="videoticker-users"]').click();
+    var MockUser = Factories.getMockUser("QunitUser", "18888444472920958972084000340434", "Ultra", "Cool")
     $('#roster').data("roster")._state.users[MockUser.uid] = MockUser;
     $('#roster').data("roster")._updateUser(MockUser);
     equal($("#"+MockUser.uid).length, 1, "User is visible");
