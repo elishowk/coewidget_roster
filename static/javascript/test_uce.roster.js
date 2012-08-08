@@ -78,7 +78,7 @@ test("Speaker is in the right place", function() {
     // Cleaning
     $("#"+MockSpeaker.uid).remove();
 });
-/*
+
 test("User connection", function() {
     expect(6);
     // Initialize
@@ -105,7 +105,7 @@ test("User connection", function() {
     equal($("#"+MockUser.uid).hasClass("offline-user"), true, "User is offline (has class offline)");
     // Cleaning
     $("#"+MockUser.uid).remove();
-});*/
+});
 
 test("User click test", function() {
     expect(8);
