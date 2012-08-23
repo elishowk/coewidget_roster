@@ -56,10 +56,6 @@ $.uce.Roster.prototype = {
         this._updateLoop = window.setInterval(function(){
                 that._updateRoster();
             }, that.options.updateInterval);
-        this._reconnectLoop = window.setInterval(function(){
-                that.autoReconnectUser();
-            }, that.options.updateInterval);
-        this._updateRoster();
     },
 
     /*
@@ -270,45 +266,10 @@ $.uce.Roster.prototype = {
                 return;
             }
             that._state.roster=roster;
-            that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid; });
+            that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
             $.each(users, function(idx, user) {
                 that._updateUser(user);
             });
-        });
-
-    },
-    autoReconnectUser: function() {
-        if(getUsername()==="anonymous") {
-            return;
-        }
-        var that = this;
-        this.options.uceclient.presence(function(err, presence) {
-            if (err!==null) {
-                that.options.uceclient.auth(
-                    getUsername(),
-                    getUcenginePassword(),
-                    function(err, result, xhr) {
-                        if (err!==null) {
-                            uceclient.auth(
-                                'anonymous',
-                                '',
-                                function(err, result, xhr) {
-                                    that.options.ucemeeting.join({}, function(err, result, xhr) {
-                                        if(err) {
-                                            // TODO notify
-                                        }
-                                    });
-                                });
-                        }
-                        else {
-                            that.options.ucemeeting.join({}, function(err, result, xhr) {
-                                if(err) {
-                                    // TODO notify
-                                }
-                            });
-                        }
-                });
-            }
         });
     },
     
