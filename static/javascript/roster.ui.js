@@ -263,13 +263,58 @@ $.uce.Roster.prototype = {
         // requete Async uce
         this.options.ucemeeting.getRoster(function(err, roster){
             if (err!==null){
-                return;
+                that.options.ucemeeting.join({}, function(err, result, xhr) {
+                    if(err) {
+                        // TODO notify
+                    }
+                });
             }
             that._state.roster=roster;
             that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
             $.each(users, function(idx, user) {
                 that._updateUser(user);
             });
+        });
+    },
+    reconnectUser: function() {
+        var that = this;
+        that.options.uceclient.auth(
+            // TODO dismiss these functions
+            getUsername(),
+            getUcenginePassword(),
+            function(err, result, xhr) {
+                if (err==400 || err==403) {
+                    that.options.uceclient.auth(
+                        'anonymous',
+                        '',
+                        function(err, result, xhr) {
+                            that.options.ucemeeting.join({}, function(err, result, xhr) {
+                                if(err) {
+                                    // TODO notify
+                                }
+                            });
+                        });
+                } else if (err>=500) {
+                    /* server error, then retry every second */
+                    window.setTimeout(that.autoReconnectUser, 1000);
+                } else {
+                    that.options.ucemeeting.join({}, function(err, result, xhr) {
+                        if(err!==null) {
+                            // TODO notify
+                        }
+                    });
+                }
+        });
+    },
+    autoReconnectUser: function() {
+        if(getUsername()==="anonymous") {
+            return;
+        }
+        var that = this;
+        this.options.uceclient.presence(function(err, presence) {
+            if (err!==null) {
+                that.reconnectUser();
+            }
         });
     },
     
