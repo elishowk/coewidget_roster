@@ -1,0 +1,19 @@
+{% load static i18n %}
+<div id="{{ id }}" class="{{ classes }}">
+    <h3 class="main-title main-title-users">{% trans "USERS" %}</h3>
+    <div class="nano-wrapper">
+        <div class="nano">
+            <div class="pane-content">
+
+                <h4 class="sub-title sub-title-people">{% trans "Invited" %}</h4>
+                    <ul class="users-list"></ul>
+                
+                <h4 class="sub-title sub-title-carret" data-user-list="online">{% trans "Online" %}</h4>
+                    <ul class="users-list" data-user-list="online" style="display: block;"></ul>
+                
+                <h4 class="sub-title sub-title-carret" data-user-list="offline">{% trans "Offline" %}</h4>
+                    <ul class="users-list" data-user-list="offline" style="display: block; "></ul>
+            </div>
+        </div>
+    </div><!-- /.nano-wrapper -->
+</div>
