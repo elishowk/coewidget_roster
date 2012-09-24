@@ -56,10 +56,6 @@ $.uce.Roster.prototype = {
         this._updateLoop = window.setInterval(function(){
                 that._updateRoster();
             }, that.options.updateInterval);
-        this._reconnectLoop = window.setInterval(function(){
-                that.autoReconnectUser();
-            }, that.options.updateInterval);
-        this._updateRoster();
     },
 
     /*
@@ -267,28 +263,24 @@ $.uce.Roster.prototype = {
         // requete Async uce
         this.options.ucemeeting.getRoster(function(err, roster){
             if (err!==null){
-                that.options.ucemeeting.join({}, function(err, result, xhr) {
-                    if(err) {
-                        // TODO notify
-                    }
-                });
+                that.autoReconnectUser();
+                return;
             }
             that._state.roster=roster;
-            that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid; });
+            that._state.rosterUidList = $.map(roster, function(connecteduser){ return connecteduser.uid });
             $.each(users, function(idx, user) {
                 that._updateUser(user);
             });
         });
-
     },
     reconnectUser: function() {
         var that = this;
         that.options.uceclient.auth(
-            // TODO dismiss these functions
+            // TODO trash these crappy functions
             getUsername(),
             getUcenginePassword(),
             function(err, result, xhr) {
-                if (err==400 || err==403) {
+                if (err<500 && err >= 400) {
                     that.options.uceclient.auth(
                         'anonymous',
                         '',
@@ -312,9 +304,6 @@ $.uce.Roster.prototype = {
         });
     },
     autoReconnectUser: function() {
-        if(getUsername()==="anonymous") {
-            return;
-        }
         var that = this;
         this.options.uceclient.presence(function(err, presence) {
             if (err!==null) {
