@@ -95,7 +95,7 @@ $.uce.Roster.prototype = {
                 from: event.from
             });
         });
-    },
+    }, 
     
     /**
      * UCE Event handler
@@ -105,7 +105,9 @@ $.uce.Roster.prototype = {
         if (typeof this._state.users[event.from] === "undefined") {
             // boolean value indicates a request is pending
             this._state.users[event.from] = true;
-            this._getUserData(event);
+            var that = this,
+                ev = event;
+            _.defer( function() { that._getUserData(ev) } );
             return;
         }
     },
